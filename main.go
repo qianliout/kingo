@@ -1,9 +1,5 @@
 package main
 
-import (
-	crawlCmd "outback/kingo/service/crawl/cmd"
-)
-
 // func main() {
 // 	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/stack?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
 // 	if err != nil {
@@ -20,7 +16,7 @@ import (
 // }
 
 func main() {
-	cmd := crawlCmd.NewCrawlCommand()
-	if err := cmd.Execute(); err != nil {
-	}
+	// cmd := crawlCmd.NewCrawlCommand()
+	// if err := cmd.Execute(); err != nil {
+	// }
 }
