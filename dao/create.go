@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"outback/geeke/stack/items"
+	"outback/kingo/items"
 
 	"gorm.io/gorm"
 )

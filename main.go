@@ -1,7 +1,7 @@
 package main
 
 import (
-	crawlCmd "outback/geeke/stack/service/crawl/cmd"
+	crawlCmd "outback/kingo/service/crawl/cmd"
 )
 
 // func main() {

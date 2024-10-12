@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"outback/geeke/stack/dao"
-	"outback/geeke/stack/items"
+	"outback/kingo/dao"
+	"outback/kingo/items"
 
 	"github.com/gocolly/colly"
 	"github.com/rs/zerolog/log"

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"outback/geeke/stack/config"
-	"outback/geeke/stack/dao"
-	"outback/geeke/stack/service/crawl/spiders"
+	"outback/kingo/config"
+	"outback/kingo/dao"
+	"outback/kingo/service/crawl/spiders"
 
 	"github.com/spf13/cobra"
 	"gorm.io/driver/mysql"

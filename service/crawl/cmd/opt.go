@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"outback/geeke/stack/config"
+	"outback/kingo/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
