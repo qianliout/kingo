@@ -1,22 +1,35 @@
 package main
 
-// func main() {
-// 	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/stack?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
-// 	if err != nil {
-// 		log.Error().Err(err)
-// 		return
-// 	}
-// 	pip := pipline.NewCreate(db)
-//
-// 	sp := spiders.NewStarkSpider(pip)
-// 	// sp := spiders.NewNameCode(pip)
-// 	//
-// 	// sp.ListSh()
-// 	sp.Start()
-// }
+import (
+	"github.com/spf13/cobra"
+	"os"
+	"outback/kingo/service/crawl/cmd"
+	"outback/kingo/service/flag"
+	"time"
+)
 
 func main() {
-	// cmd := crawlCmd.NewCrawlCommand()
-	// if err := cmd.Execute(); err != nil {
-	// }
+	rootCmd := NewCmdRoot()
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+	time.Sleep(time.Hour)
+}
+
+func NewCmdRoot() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "prepare <subcommand> [flags]",
+		Short: "prepare agentless scan",
+		CompletionOptions: cobra.CompletionOptions{
+			DisableDefaultCmd: true,
+		},
+	}
+
+	flag.AddOption(rootCmd)
+	// rootCmd.AddCommand(version.NewVersionCmd())
+	// rootCmd.AddCommand(huawei.NewHuaweiCmd())
+	rootCmd.AddCommand(cmd.NewCrawlCommand())
+
+	return rootCmd
 }

@@ -4,11 +4,11 @@ server:
 
 database:
   username: "root"
-  password: "root"
+  password: "Ky@r4fzj"
   host: "127.0.0.1"
   port: 3306
-  name: "stack"
+  dbname: "stack"
 
 crawl:
-  debug:true
+  debug: "true"
 

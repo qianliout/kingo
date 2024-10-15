@@ -20,7 +20,7 @@ type DBConfig struct {
 }
 
 type CrawlConfig struct {
-	Debug  bool     `yaml:"debug"`
+	Debug  string   `yaml:"debug"`
 	Period []string `yaml:"period"` // 爬取特定的周期
 	Code   []string `yaml:"code"`   // 只爬取特定的
 }
@@ -34,10 +34,10 @@ func GetDefaultConfig() *Config {
 			Password: "root",
 			Host:     "127.0.0.1",
 			Port:     "3306",
-			DBName:   "stock",
+			DBName:   "stack",
 		},
 		CrawlConfig: CrawlConfig{
-			Debug:  true,
+			Debug:  "true",
 			Period: []string{},
 			Code:   []string{},
 		},

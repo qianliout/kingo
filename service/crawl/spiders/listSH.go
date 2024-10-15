@@ -34,7 +34,7 @@ func (s *NameCode) Start(ctx context.Context) {
 	// 声明初始化NewCollector对象时可以指定Agent，连接递归深度，URL过滤以及domain限制等
 	c := colly.NewCollector(
 		colly.UserAgent("Opera/9.80 (Windows NT 6.1; U; zh-cn) Presto/2.9.168 Version/11.50"),
-		colly.AllowedDomains("sina.com.cn"),
+		// colly.AllowedDomains("sina.com.cn"),
 		colly.MaxDepth(-1),
 	)
 
@@ -49,7 +49,7 @@ func (s *NameCode) Start(ctx context.Context) {
 		r.Headers.Set("Accept-Language", "zh-CN, zh;q=0.9")
 		r.Headers.Set("Referer", "http://www.sse.com.cn/")
 		r.Headers.Set("accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-		log.Print("Visiting", r.URL)
+		log.Error().Str("url", r.URL.String()).Msg("start crawl")
 	})
 
 	// // 发现并访问其他年度的利润表
@@ -80,14 +80,18 @@ func (s *NameCode) Start(ctx context.Context) {
 	// })
 
 	// extract status code
-	c.OnResponse(func(r *colly.Response) {
-		fmt.Println("response received", r.StatusCode)
-		// 设置context
-		fmt.Println(r.Ctx.Get("url"))
-	})
+	// c.OnResponse(func(r *colly.Response) {
+	// 	fmt.Println("response received", r.StatusCode)
+	// 	// 设置context
+	// 	fmt.Println(r.Ctx.Get("url"))
+	// })
 
 	c.OnResponse(func(resp *colly.Response) {
-		fmt.Println("response received", resp.StatusCode)
+		log.Info().Str("url", resp.Request.URL.String()).Msg("response received")
+		if resp.StatusCode != 200 {
+			log.Info().Str("url", resp.Request.URL.String()).Int("status", resp.StatusCode).Msg("response received but not get data")
+			return
+		}
 
 		res := new(items.NubSh)
 		err := json.Unmarshal(resp.Body, res)
@@ -114,8 +118,13 @@ func (s *NameCode) Start(ctx context.Context) {
 		log.Error().Err(err).Msg(response.Ctx.Get("url"))
 	})
 	// 上证
-	for page := 1; page <= 66; page++ {
+	for page := 1; page <= 1; page++ {
 		url := fmt.Sprintf(s.PageUrl, page, page, time.Now().UnixMilli())
-		_ = c.Visit(url)
+		err := c.Visit(url)
+		if err != nil {
+			log.Err(err).Str("url", url).Msg("start visit")
+			continue
+		}
+		log.Info().Str("url", url).Msg("start visit")
 	}
 }
