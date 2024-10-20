@@ -11,4 +11,6 @@ database:
 
 crawl:
   debug: "true"
+  period:
+    - "2024"
 

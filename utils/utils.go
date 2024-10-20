@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -46,4 +48,39 @@ func ParsePeriod(res []string) int {
 		}
 	}
 	return len(res)
+}
+
+func SetField(obj interface{}, fieldName string, value interface{}) error {
+	// 获取对象的反射值
+	val := reflect.ValueOf(obj)
+
+	// 检查是否是指针
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	// 检查是否是结构体
+	if val.Kind() != reflect.Struct {
+		return fmt.Errorf("obj must be a struct or pointer to struct")
+	}
+
+	// 获取字段
+	field := val.FieldByName(fieldName)
+	if !field.IsValid() {
+		return fmt.Errorf("field %s not found in struct", fieldName)
+	}
+
+	// 检查字段是否可设置
+	if !field.CanSet() {
+		return fmt.Errorf("field %s is not settable", fieldName)
+	}
+
+	// 设置字段值
+	fieldVal := reflect.ValueOf(value)
+	if !fieldVal.Type().ConvertibleTo(field.Type()) {
+		return fmt.Errorf("value type %s is not convertible to field type %s", fieldVal.Type(), field.Type())
+	}
+
+	field.Set(fieldVal.Convert(field.Type()))
+	return nil
 }

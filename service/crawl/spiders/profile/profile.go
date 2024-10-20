@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"outback/kingo/config"
 	"outback/kingo/dao"
 	"outback/kingo/items"
 	"outback/kingo/utils"
@@ -123,7 +124,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 		log.Error().Err(err).Msg("find name and code")
 		return
 	}
-	years := []string{"2023", "2021"}
+	years := config.GetConfig().CrawlConfig.Period
 	for i := range codes {
 		for j := range years {
 			proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
@@ -138,7 +139,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 			// 		log.Error().Err(err).Msgf("Visit: %s", cashUrl)
 			// 	}
 			// }
-			//
+
 			// if codes[i].Balance == 0 {
 			// 	balanceUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_BalanceSheet/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
 			// 	if err := c.Visit(balanceUrl); err != nil {
@@ -216,7 +217,7 @@ func (s *StarkSpider) ParseProfile(i int, selection *goquery.Selection) {
 //
 // 	selection.Find("tr th ").Each(
 // 		func(i int, selection *goquery.Selection) {
-// 			na, co := spiders.parseNameCode(selection)
+// 			na, co := utils.ParseNameCode(selection)
 // 			name = na
 // 			code = co
 // 		})
@@ -239,6 +240,7 @@ func (s *StarkSpider) ParseProfile(i int, selection *goquery.Selection) {
 // 	log.Info().Msgf("写入现金表成功,Name:%s Code：%s", name, code)
 //
 // }
+
 //
 // func (s *StarkSpider) ParseBalance(i int, selection *goquery.Selection) {
 //
@@ -292,12 +294,31 @@ func parseProfile(name, code string, res []string) ([]*items.Profile, error) {
 		ans[i].ReportPeriod = date[i]
 		ans[i].Code = code
 		ans[i].Name = name
+		_ = utils.SetField(ans[i], "OperateIn", 12)
 	}
+	items := map[string]string{
+		"一、营业总收入":     "OperateIn",
+		"二、营业总成本":     "OperateAllCost",
+		"营业成本":        "OperateCost",
+		"营业税金及附加":     "Tax",
+		"销售费用":        "SalesCost",
+		"管理费用":        "OperateCost",
+		"财务费用":        "FinancialCost",
+		"研发费用":        "RDCost",
+		"五、净利润":       "NetProfit",
+		"稀释每股收益(元/股)": "EarnPerShare",
+		"投资收益":        "Invest",
+		"公允价值变动收益":    "FairIn",
+	}
+
 	i := 0
 	for i < len(res) {
+
 		switch res[i] {
+
 		case "一、营业总收入":
 			for j := 0; j < per; j++ {
+				_ = utils.SetField(ans[j], "OperateIn", ParseNums(res[i+j+1]))
 				ans[j].OperateIn = ParseNums(res[i+j+1])
 			}
 			i = i + per
@@ -386,74 +407,89 @@ func ParseNums(res string) int64 {
 // 	}
 // }
 
-//
-// func parseCashFlow(name, code string, res []string) ([]items.CashFlow, error) {
+// func parseCashFlow(name, code string, res []string) ([]*items.Profile, error) {
 // 	per := utils.ParsePeriod(res)
 // 	date := utils.ReportDate(res)
 // 	if per != len(date) {
-// 		log.Error().Err(fmt.Errorf("日期列不符"))
+// 		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
 // 		return nil, fmt.Errorf("日期列不符")
 // 	}
-// 	ans := make([]items.CashFlow, per)
+// 	ans := make([]*items.CashFlow, per)
+// 	for i := range ans {
+// 		ans[i] = &items.CashFlow{}
+// 	}
 // 	for i := 0; i < len(date); i++ {
 // 		ans[i].ReportPeriod = date[i]
 // 		ans[i].Code = code
 // 		ans[i].Name = name
 // 	}
+// 	/*
+// 			ReportPeriod string `gorm:"column:report_period"` // 报告期
+// 		SaleIn       int64  `gorm:"column:sale_in"`       // 销售商品流入
+// 		TaxIn        int64  `gorm:"column:tax_in"`        // 税费返还
+// 		SumIn        int64  `gorm:"column:sum_in"`        // 经营活动流入小计
+// 		SaleOut      int64  `gorm:"column:sale_out"`      // 购买商口的流出
+// 		EmpOut       int64  `gorm:"column:emp_out"`       // 支付给员工的流出
+// 		SumOut       int64  `gorm:"column:sum_out"`       // 流出小计
+// 		Netflow      int64  `gorm:"column:netflow"`       // 经营活动现金净额
+// 	*/
+//
 // 	i := 0
+// 	// items := []string{
+// 	// 	"销售商品流入",
+// 	// 	"税费返还",
+// 	// 	"经营活动流入小计",
+// 	// 	"购买商品的流出",
+// 	// 	"支付给员工的流出",
+// 	// 	"流出小计",
+// 	// 	"经营活动现金净额",
+// 	// }
+//
 // 	for i < len(res) {
 // 		switch res[i] {
-// 		case "销售商品、提供劳务收到的现金":
+// 		case "销售商品流入":
 // 			for j := 0; j < per; j++ {
-// 				parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64)
-// 				if err != nil {
-// 					log.Error().Err(err).Msg("strconv.ParseInt")
-// 				}
-// 				ans[j].SalesCash = parseInt
+// 				_ = utils.SetField(ans[j], "SaleIn", ParseNums(res[i+j+1]))
+// 				ans[j].SaleIn = ParseNums(res[i+j+1])
 // 			}
 // 			i = i + per
-// 		case "经营活动现金流入小计":
+// 		case "税费返还":
 // 			for j := 0; j < per; j++ {
-// 				parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64)
-// 				if err != nil {
-// 					log.Error().Err(err).Msg("strconv.ParseInt")
-// 				}
-// 				ans[j].SumInFow = parseInt
+// 				ans[j].TaxIn = ParseNums(res[i+j+1])
 // 			}
 // 			i = i + per
-// 		case "购买商品、接受劳务支付的现金":
+// 		case "经营活动流入小计":
 // 			for j := 0; j < per; j++ {
-// 				parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64)
-// 				if err != nil {
-// 					log.Error().Err(err).Msg("strconv.ParseInt")
-// 				}
-// 				ans[j].BuyCash = parseInt
+// 				ans[j].SumIn = ParseNums(res[i+j+1])
 // 			}
 // 			i = i + per
-// 		case "经营活动现金流出小计":
+// 		case "购买商品的流出":
 // 			for j := 0; j < per; j++ {
-// 				parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64)
-// 				if err != nil {
-// 					log.Error().Err(err).Msg("strconv.ParseInt")
-// 				}
-// 				ans[j].SumOutFow = parseInt
+// 				ans[j].SaleOut = ParseNums(res[i+j+1])
 // 			}
 // 			i = i + per
-// 		case "经营活动产生的现金流量净额":
+// 		case "支付给员工的流出":
 // 			for j := 0; j < per; j++ {
-// 				parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64)
-// 				if err != nil {
-// 					log.Error().Err(err).Msg("strconv.ParseInt")
-// 				}
-// 				ans[j].NetCashFlow = parseInt
+// 				ans[j].EmpOut = ParseNums(res[i+j+1])
+// 			}
+// 			i = i + per
+// 		case "流出小计":
+// 			for j := 0; j < per; j++ {
+// 				ans[j].SumOut = ParseNums(res[i+j+1])
+// 			}
+// 			i = i + per
+// 		case "经营活动现金净额":
+// 			for j := 0; j < per; j++ {
+// 				ans[j].Netflow = ParseNums(res[i+j+1])
 // 			}
 // 			i = i + per
 // 		}
-// 		i = i + 1
+// 		i = i + per
 // 	}
 //
 // 	return ans, nil
 // }
+
 //
 // func parseBalance(name, code string, res []string) ([]items.Balance, error) {
 // 	per := Period(res)

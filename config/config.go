@@ -38,11 +38,15 @@ func GetDefaultConfig() *Config {
 		},
 		CrawlConfig: CrawlConfig{
 			Debug:  "true",
-			Period: []string{},
+			Period: []string{"2024", "2023"},
 			Code:   []string{},
 		},
 	}
 	return c
+}
+
+func GetConfig() *Config {
+	return conf
 }
 
 func SetDefaultConfig(c *Config) *Config {

@@ -6,7 +6,7 @@ import "fmt"
 
 type Profile struct {
 	ID       int64  `gorm:"column:id"`
-	UniqueID string `gorm:"column:unique_id"`
+	UniqueID string `gorm:"column:unique_id" json:"uniqueId,string"`
 
 	Code           string `gorm:"column:code"`             // 代码
 	Name           string `gorm:"column:name"`             // 名字
