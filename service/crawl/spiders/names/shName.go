@@ -1,4 +1,4 @@
-package spiders
+package names
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"github.com/gocolly/colly"
 	"github.com/rs/zerolog/log"
 )
+
+// 爬取上证的股票代码
 
 type NameCode struct {
 	ErrorURL []string
@@ -104,7 +106,7 @@ func (s *NameCode) Start(ctx context.Context) {
 			if err := s.create.CreateNameCode(context.Background(), data); err != nil {
 				log.Error().Err(err).Str("data", data.LogStr()).Msg("create name")
 			}
-			log.Error().Err(err).Interface("data", data).Msg("create name")
+			log.Info().Interface("data", data).Msg("create name")
 		}
 	})
 
@@ -118,7 +120,7 @@ func (s *NameCode) Start(ctx context.Context) {
 		log.Error().Err(err).Msg(response.Ctx.Get("url"))
 	})
 	// 上证
-	for page := 1; page <= 1; page++ {
+	for page := 1; page <= 70; page++ {
 		url := fmt.Sprintf(s.PageUrl, page, page, time.Now().UnixMilli())
 		err := c.Visit(url)
 		if err != nil {

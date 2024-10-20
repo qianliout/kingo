@@ -10,7 +10,7 @@ import (
 )
 
 type SearchDal interface {
-	SearchNameCode(ctx context.Context, param *items.SearchNameCodeParam) ([]items.NameCode, error)
+	SearchNameCode(ctx context.Context, param items.SearchNameCodeParam) ([]items.NameCode, error)
 }
 
 type SearchDao struct {

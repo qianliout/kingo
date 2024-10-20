@@ -2,10 +2,11 @@ package dao
 
 import (
 	"context"
+	"time"
+
+	"outback/kingo/items"
 
 	"gorm.io/gorm"
-	"outback/kingo/items"
-	"time"
 )
 
 type CreateDal interface {
@@ -50,12 +51,10 @@ func (dal *CreateDao) CreateCashFlow(ctx context.Context, data *items.CashFlow) 
 }
 
 func (dal *CreateDao) CreateProfile(ctx context.Context, data *items.Profile) error {
-
 	data.Serialize()
 	ctx, cancelFunc := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelFunc()
 	db := dal.db.Table(data.TableName()).WithContext(ctx)
-
 	if err := db.Where("unique_id = ?", data.UniqueID).
 		Delete(&items.Profile{}).Error; err != nil {
 		return err
