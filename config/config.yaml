@@ -13,4 +13,6 @@ crawl:
   debug: "true"
   period:
     - "2024"
+  code:
+    - "603205"
 

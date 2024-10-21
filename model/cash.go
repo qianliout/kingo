@@ -1,13 +1,15 @@
-package items
+package model
 
-import "fmt"
+import (
+	"fmt"
+	"outback/kingo/utils"
+)
 
 // 现金流量表
 
 type CashFlow struct {
-	ID       int64  `gorm:"column:id"`
-	UniqueID string `gorm:"column:unique_id"`
-
+	ID           int64  `gorm:"column:id"`
+	UniqueID     int64  `gorm:"column:unique_id"`
 	Name         string `gorm:"column:name"`          // 名字
 	Code         string `gorm:"column:code"`          // 代码
 	ReportPeriod string `gorm:"column:report_period"` // 报告期
@@ -28,5 +30,5 @@ func (vi *CashFlow) TableName() string {
 }
 
 func (vi *CashFlow) Serialize() {
-	vi.UniqueID = fmt.Sprintf("%s-%s", vi.Code, vi.ReportPeriod)
+	vi.UniqueID = utils.GenerateUUID64(fmt.Sprintf("%s-%s", vi.Code, vi.ReportPeriod))
 }

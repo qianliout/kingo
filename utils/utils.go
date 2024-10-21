@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"hash/fnv"
 	"reflect"
 	"regexp"
 	"strings"
@@ -35,7 +36,7 @@ func ReportDate(res []string) []string {
 	return ans
 }
 
-// 查询当前的报表中有几个时间区
+// ParsePeriod 查询当前的报表中有几个时间区
 func ParsePeriod(res []string) int {
 	start := 0
 
@@ -47,7 +48,7 @@ func ParsePeriod(res []string) int {
 			return i - start - 1
 		}
 	}
-	return len(res)
+	return 0
 }
 
 func SetField(obj interface{}, fieldName string, value interface{}) error {
@@ -83,4 +84,11 @@ func SetField(obj interface{}, fieldName string, value interface{}) error {
 
 	field.Set(fieldVal.Convert(field.Type()))
 	return nil
+}
+
+func GenerateUUID64(str string) int64 {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(str))
+	ans := h.Sum32()
+	return int64(ans)
 }

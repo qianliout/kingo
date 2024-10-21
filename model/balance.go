@@ -1,12 +1,15 @@
-package items
+package model
 
-import "fmt"
+import (
+	"fmt"
+	"outback/kingo/utils"
+)
 
 // 资产负债表
 
 type Balance struct {
-	ID       int64  `gorm:"column:id"`
-	UniqueID string `gorm:"column:unique_id"`
+	ID       int64 `gorm:"column:id"`
+	UniqueID int64 `gorm:"column:unique_id"`
 
 	Name           string `gorm:"column:name"`            // 名字
 	Code           string `gorm:"column:code"`            // 代码
@@ -33,5 +36,5 @@ func (vi *Balance) TableName() string {
 }
 
 func (vi *Balance) Serialize() {
-	vi.UniqueID = fmt.Sprintf("%s-%s", vi.Code, vi.ReportPeriod)
+	vi.UniqueID = utils.GenerateUUID64(fmt.Sprintf("%s-%s", vi.Code, vi.ReportPeriod))
 }

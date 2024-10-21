@@ -1,6 +1,9 @@
-package items
+package model
 
-import "fmt"
+import (
+	"fmt"
+	"outback/kingo/utils"
+)
 
 // 股票列表
 
@@ -59,3 +62,23 @@ const (
 	ExchangeShenzhen = "sz"
 	ExchangeBeijing  = "bj"
 )
+
+type Crawl struct {
+	ID           int64  `gorm:"column:id"`
+	UniqueID     int64  `gorm:"column:unique_id"`
+	Code         string `gorm:"column:code"`          // 代码
+	ReportPeriod string `gorm:"column:report_period"` // 报告期
+	CrawlType    string `gorm:"column:crawl_type"`
+
+	CrawlAt   int64 `gorm:"column:crawl_at"`
+	CreatedAt int64 `gorm:"autoCreateTime:milli;column:created_at"` // milliseconds
+	UpdatedAt int64 `gorm:"autoUpdateTime:milli;column:updated_at"` // milliseconds
+}
+
+func (vi *Crawl) TableName() string {
+	return "crawl"
+}
+
+func (vi *Crawl) Serialize() {
+	vi.UniqueID = utils.GenerateUUID64(fmt.Sprintf("%s-%s-%s", vi.Code, vi.ReportPeriod, vi.CrawlType))
+}

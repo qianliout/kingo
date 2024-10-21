@@ -5,14 +5,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"outback/kingo/config"
 	"outback/kingo/dao"
-	"outback/kingo/items"
+	"outback/kingo/model"
 	"outback/kingo/utils"
 
 	"github.com/PuerkitoBio/goquery"
@@ -88,9 +87,9 @@ func (s *StarkSpider) Start(ctx context.Context) {
 				htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseProfile)
 			}
 
-			// if strings.Contains(url, "vFD_CashFlow") {
-			// 	htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseCash)
-			// }
+			if strings.Contains(url, "vFD_CashFlow") {
+				htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseCash)
+			}
 			//
 			// if strings.Contains(url, "vFD_BalanceSheet") {
 			// 	htmlDoc.Find(`#BalanceSheetNewTable0`).Each(s.ParseBalance)
@@ -119,15 +118,17 @@ func (s *StarkSpider) Start(ctx context.Context) {
 
 	})
 
-	codes, err := s.search.SearchNameCode(context.Background(), items.SearchNameCodeParam{})
-	if err != nil {
-		log.Error().Err(err).Msg("find name and code")
-		return
-	}
+	// codes, err := s.search.SearchNameCode(context.Background(), items.SearchNameCodeParam{})
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("find name and code")
+	// 	return
+	// }
 	years := config.GetConfig().CrawlConfig.Period
+	codes := config.GetConfig().CrawlConfig.Code
 	for i := range codes {
 		for j := range years {
-			proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			// proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i], years[j])
 			if err := c.Visit(proUrl); err != nil {
 				log.Error().Err(err).Msgf("Visit：%s", proUrl)
 				continue
@@ -204,42 +205,47 @@ func (s *StarkSpider) ParseProfile(i int, selection *goquery.Selection) {
 	log.Info().Msgf("写入利润表成功,Name %s:Code：%s", name, code)
 }
 
-// func (s *StarkSpider) ParseCash(i int, selection *goquery.Selection) {
-// 	res := make([]string, 0)
-// 	name, code := "", ""
-//
-// 	selection.Find(" tr td ").Each(
-// 		func(i int, selection *goquery.Selection) {
-// 			t := selection.Text()
-// 			res = append(res, t)
-// 		},
-// 	)
-//
-// 	selection.Find("tr th ").Each(
-// 		func(i int, selection *goquery.Selection) {
-// 			na, co := utils.ParseNameCode(selection)
-// 			name = na
-// 			code = co
-// 		})
-//
-// 	cashs, err := parseCashFlow(name, code, res)
-// 	if err != nil {
-// 		log.Error().Err(err).Msg("parseProfile")
-// 		return
-// 	}
-// 	for i := range cashs {
-// 		if err := s.create.CreateCodeCashFlow(context.Background(), cashs[i]); err != nil {
-// 			log.Error().Err(err).Msg("CreateProfile")
-// 		}
-//
-// 		updater := map[string]interface{}{"cash_flow": time.Now().Unix()}
-// 		if err := s.create.UpdateNameCode(context.Background(), code, updater); err != nil {
-// 			log.Error().Err(err).Msg("UpdateNameCode")
-// 		}
-// 	}
-// 	log.Info().Msgf("写入现金表成功,Name:%s Code：%s", name, code)
-//
-// }
+func (s *StarkSpider) ParseCash(j int, selection *goquery.Selection) {
+	res := make([]string, 0)
+	name, code := "", ""
+
+	selection.Find(" tr td ").Each(
+		func(i int, selection *goquery.Selection) {
+			t := selection.Text()
+			res = append(res, t)
+		},
+	)
+
+	selection.Find("tr th ").Each(
+		func(i int, selection *goquery.Selection) {
+			na, co := utils.ParseNameCode(selection)
+			name = na
+			code = co
+		})
+
+	cashs, err := parseCashFlow(name, code, res)
+	if err != nil {
+		log.Error().Err(err).Msg("parseProfile")
+		return
+	}
+	for i := range cashs {
+		if err := s.create.CreateCashFlow(context.Background(), cashs[i]); err != nil {
+			log.Error().Err(err).Msg("CreateProfile")
+		}
+		crawl := &model.Crawl{
+			Code:         code,
+			ReportPeriod: "",
+			CrawlType:    "",
+			CrawlAt:      time.Now().UnixMilli(),
+		}
+		updater := map[string]interface{}{"cash_flow": time.Now().Unix()}
+		if err := s.create.CreateBalance(context.Background(), code, updater); err != nil {
+			log.Error().Err(err).Msg("UpdateNameCode")
+		}
+	}
+	log.Info().Msgf("写入现金表成功,Name:%s Code：%s", name, code)
+
+}
 
 //
 // func (s *StarkSpider) ParseBalance(i int, selection *goquery.Selection) {
@@ -279,30 +285,30 @@ func (s *StarkSpider) ParseProfile(i int, selection *goquery.Selection) {
 //
 // }
 
-func parseProfile(name, code string, res []string) ([]*items.Profile, error) {
+func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
 	per := utils.ParsePeriod(res)
 	date := utils.ReportDate(res)
 	if per != len(date) {
 		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
 		return nil, fmt.Errorf("日期列不符")
 	}
-	ans := make([]*items.Profile, per)
+	ans := make([]*model.Profile, per)
 	for i := range ans {
-		ans[i] = &items.Profile{}
+		ans[i] = &model.Profile{}
 	}
 	for i := 0; i < len(date); i++ {
 		ans[i].ReportPeriod = date[i]
 		ans[i].Code = code
 		ans[i].Name = name
-		_ = utils.SetField(ans[i], "OperateIn", 12)
 	}
-	items := map[string]string{
+
+	item := map[string]string{
 		"一、营业总收入":     "OperateIn",
 		"二、营业总成本":     "OperateAllCost",
 		"营业成本":        "OperateCost",
 		"营业税金及附加":     "Tax",
 		"销售费用":        "SalesCost",
-		"管理费用":        "OperateCost",
+		"管理费用":        "ManageCost",
 		"财务费用":        "FinancialCost",
 		"研发费用":        "RDCost",
 		"五、净利润":       "NetProfit",
@@ -310,86 +316,33 @@ func parseProfile(name, code string, res []string) ([]*items.Profile, error) {
 		"投资收益":        "Invest",
 		"公允价值变动收益":    "FairIn",
 	}
-
 	i := 0
 	for i < len(res) {
-
-		switch res[i] {
-
-		case "一、营业总收入":
-			for j := 0; j < per; j++ {
-				_ = utils.SetField(ans[j], "OperateIn", ParseNums(res[i+j+1]))
-				ans[j].OperateIn = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "二、营业总成本":
-			for j := 0; j < per; j++ {
-				ans[j].OperateAllCost = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "营业成本":
-			for j := 0; j < per; j++ {
-				ans[j].OperateCost = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "营业税金及附加":
-			for j := 0; j < per; j++ {
-				ans[j].Tax = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "销售费用":
-			for j := 0; j < per; j++ {
-				ans[j].SalesCost = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "管理费用":
-			for j := 0; j < per; j++ {
-				ans[j].OperateCost = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "财务费用":
-			for j := 0; j < per; j++ {
-				ans[j].FinancialCost = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "研发费用":
-			for j := 0; j < per; j++ {
-				ans[j].RDCost = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "五、净利润":
-			for j := 0; j < per; j++ {
-				ans[j].NetProfit = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "稀释每股收益(元/股)":
-			for j := 0; j < per; j++ {
-				ans[j].EarnPerShare = ParseNums(res[i+j+1])
-			}
-			i = i + per
-		case "投资收益":
-			for j := 0; j < per; j++ {
-				ans[j].Invest = ParseNums(res[i+j+1])
-			}
-		case "公允价值变动收益":
-			for j := 0; j < per; j++ {
-				ans[j].FairIn = ParseNums(res[i+j+1])
+		for k, v := range item {
+			if strings.Contains(res[i], k) {
+				for j := 0; j < per; j++ {
+					_ = utils.SetField(ans[j], v, ParseNums(res[i+j+1]))
+				}
+				i = i + per
 			}
 		}
-		i = i + per
 	}
 
 	return ans, nil
 }
 
 func ParseNums(res string) int64 {
+	if res == "--" {
+		return 0
+	}
 	if strings.Contains(res, "亿") {
 		fmt.Println("has 亿")
 	}
 	if strings.Contains(res, "万") {
 		fmt.Println("has 万")
 	}
-	if parseInt, err := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(res, ",", ""), "-", ""), 64); err == nil {
+	// 注意可能会有负数哦
+	if parseInt, err := strconv.ParseFloat(strings.ReplaceAll(res, ",", ""), 64); err == nil {
 		return int64(parseInt)
 	}
 	return 0
@@ -407,88 +360,47 @@ func ParseNums(res string) int64 {
 // 	}
 // }
 
-// func parseCashFlow(name, code string, res []string) ([]*items.Profile, error) {
-// 	per := utils.ParsePeriod(res)
-// 	date := utils.ReportDate(res)
-// 	if per != len(date) {
-// 		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
-// 		return nil, fmt.Errorf("日期列不符")
-// 	}
-// 	ans := make([]*items.CashFlow, per)
-// 	for i := range ans {
-// 		ans[i] = &items.CashFlow{}
-// 	}
-// 	for i := 0; i < len(date); i++ {
-// 		ans[i].ReportPeriod = date[i]
-// 		ans[i].Code = code
-// 		ans[i].Name = name
-// 	}
-// 	/*
-// 			ReportPeriod string `gorm:"column:report_period"` // 报告期
-// 		SaleIn       int64  `gorm:"column:sale_in"`       // 销售商品流入
-// 		TaxIn        int64  `gorm:"column:tax_in"`        // 税费返还
-// 		SumIn        int64  `gorm:"column:sum_in"`        // 经营活动流入小计
-// 		SaleOut      int64  `gorm:"column:sale_out"`      // 购买商口的流出
-// 		EmpOut       int64  `gorm:"column:emp_out"`       // 支付给员工的流出
-// 		SumOut       int64  `gorm:"column:sum_out"`       // 流出小计
-// 		Netflow      int64  `gorm:"column:netflow"`       // 经营活动现金净额
-// 	*/
-//
-// 	i := 0
-// 	// items := []string{
-// 	// 	"销售商品流入",
-// 	// 	"税费返还",
-// 	// 	"经营活动流入小计",
-// 	// 	"购买商品的流出",
-// 	// 	"支付给员工的流出",
-// 	// 	"流出小计",
-// 	// 	"经营活动现金净额",
-// 	// }
-//
-// 	for i < len(res) {
-// 		switch res[i] {
-// 		case "销售商品流入":
-// 			for j := 0; j < per; j++ {
-// 				_ = utils.SetField(ans[j], "SaleIn", ParseNums(res[i+j+1]))
-// 				ans[j].SaleIn = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		case "税费返还":
-// 			for j := 0; j < per; j++ {
-// 				ans[j].TaxIn = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		case "经营活动流入小计":
-// 			for j := 0; j < per; j++ {
-// 				ans[j].SumIn = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		case "购买商品的流出":
-// 			for j := 0; j < per; j++ {
-// 				ans[j].SaleOut = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		case "支付给员工的流出":
-// 			for j := 0; j < per; j++ {
-// 				ans[j].EmpOut = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		case "流出小计":
-// 			for j := 0; j < per; j++ {
-// 				ans[j].SumOut = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		case "经营活动现金净额":
-// 			for j := 0; j < per; j++ {
-// 				ans[j].Netflow = ParseNums(res[i+j+1])
-// 			}
-// 			i = i + per
-// 		}
-// 		i = i + per
-// 	}
-//
-// 	return ans, nil
-// }
+func parseCashFlow(name, code string, res []string) ([]*model.CashFlow, error) {
+	per := utils.ParsePeriod(res)
+	date := utils.ReportDate(res)
+	if per != len(date) {
+		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
+		return nil, fmt.Errorf("日期列不符")
+	}
+	ans := make([]*model.CashFlow, per)
+	for i := range ans {
+		ans[i] = &model.CashFlow{}
+	}
+	for i := 0; i < len(date); i++ {
+		ans[i].ReportPeriod = date[i]
+		ans[i].Code = code
+		ans[i].Name = name
+	}
+
+	item := map[string]string{
+		"销售商品流入":   "SaleIn",
+		"税费返还":     "TaxIn",
+		"经营活动流入小计": "SumIn",
+		"购买商品的流出":  "SaleOut",
+		"支付给员工的流出": "EmpOut",
+		"流出小计":     "SumOut",
+		"经营活动现金净额": "Netflow",
+	}
+
+	i := 0
+	for i < len(res) {
+		for k, v := range item {
+			if res[i] == k {
+				for j := 0; j < per; j++ {
+					_ = utils.SetField(ans[j], v, ParseNums(res[i+j+1]))
+				}
+				i = i + per
+			}
+		}
+	}
+
+	return ans, nil
+}
 
 //
 // func parseBalance(name, code string, res []string) ([]items.Balance, error) {
@@ -555,7 +467,3 @@ func ParseNums(res string) int64 {
 //
 // 	return ans, nil
 // }
-
-var (
-	re = regexp.MustCompile("[0-9]+")
-)

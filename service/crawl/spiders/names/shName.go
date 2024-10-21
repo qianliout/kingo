@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"outback/kingo/dao"
-	"outback/kingo/items"
+	"outback/kingo/model"
 
 	"github.com/gocolly/colly"
 	"github.com/rs/zerolog/log"
@@ -95,14 +95,14 @@ func (s *NameCode) Start(ctx context.Context) {
 			return
 		}
 
-		res := new(items.NubSh)
+		res := new(model.NubSh)
 		err := json.Unmarshal(resp.Body, res)
 		if err != nil {
 			log.Error().Err(err).Msg("error")
 			return
 		}
 		for i := range res.Result {
-			data := &items.NameCode{Name: res.Result[i].Name, Code: res.Result[i].Code}
+			data := &model.NameCode{Name: res.Result[i].Name, Code: res.Result[i].Code}
 			if err := s.create.CreateNameCode(context.Background(), data); err != nil {
 				log.Error().Err(err).Str("data", data.LogStr()).Msg("create name")
 			}
