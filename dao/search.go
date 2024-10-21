@@ -44,10 +44,7 @@ func (dal *SearchDao) SearchCrawl(ctx context.Context, param model.SearchCrawlPa
 	if param.Code != "" {
 		db = db.Where("code = ?", param.Code)
 	}
-	if param.UniqueID > 0 {
-		db = db.Where("unique_id = ?", param.UniqueID)
-	}
-	if param.ReportPeriod != "" {
+	if param.Year != "" {
 		db = db.Where("report_period = ?", param.Code)
 	}
 	err := db.Find(&res).Error

@@ -23,8 +23,8 @@ type Balance struct {
 	Assets         int64  `gorm:"column:assets"`          // 固定资产
 	Stock          int64  `gorm:"column:stock"`           // 存货
 	Construct      int64  `gorm:"column:construct"`       // 在建工程
-	ShortLoan      int64  `gorm:"column:shortLoan"`       // 短期借款
-	LongLoan       int64  `gorm:"column:longLoan"`        // 长期借款
+	ShortLoan      int64  `gorm:"column:short_loan"`      // 短期借款
+	LongLoan       int64  `gorm:"column:long_loan"`       // 长期借款
 	Capital        int64  `gorm:"column:capital"`         // 实收资本
 
 	CreatedAt int64 `gorm:"autoCreateTime:milli;column:created_at"` // milliseconds

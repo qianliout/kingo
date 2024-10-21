@@ -7,7 +7,7 @@ import (
 
 	"outback/kingo/dao"
 	"outback/kingo/service/crawl/spiders"
-	"outback/kingo/service/crawl/spiders/profile"
+	"outback/kingo/service/crawl/spiders/sina"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -61,7 +61,7 @@ func NewSpider(cfg *config.Config) ([]spiders.Spider, error) {
 	sea := dao.NewSearchDao(db)
 
 	// nameS := names.NewNameCode(dal)
-	pro := profile.NewStarkSpider(dal, sea)
+	pro := sina.NewStarkSpider(dal, sea)
 	res := make([]spiders.Spider, 0)
 	// res = append(res, nameS)
 	res = append(res, pro)

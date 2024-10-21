@@ -36,8 +36,8 @@ func ReportDate(res []string) []string {
 	return ans
 }
 
-// ParsePeriod 查询当前的报表中有几个时间区
-func ParsePeriod(res []string) int {
+// ParsePeriodCnt 查询当前的报表中有几个时间区
+func ParsePeriodCnt(res []string) int {
 	start := 0
 
 	for i := 0; i < len(res); i++ {
@@ -91,4 +91,13 @@ func GenerateUUID64(str string) int64 {
 	_, _ = h.Write([]byte(str))
 	ans := h.Sum32()
 	return int64(ans)
+}
+
+func GetReportYear(str string) string {
+	// 2024-03-31
+	split := strings.Split(str, "-")
+	if len(split) > 0 {
+		return split[0]
+	}
+	return ""
 }

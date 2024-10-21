@@ -1,10 +1,11 @@
-package profile
+package sina
 
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"net/http"
+	"outback/kingo/consts"
 	"strconv"
 	"strings"
 	"time"
@@ -67,6 +68,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 
 	c.OnResponse(func(resp *colly.Response) {
 		url := resp.Request.URL.String()
+		log.Info().Str("url", url).Msg("get response url")
 		if resp.StatusCode != http.StatusOK {
 			log.Info().Msgf("Status is not OK:%s", url)
 			return
@@ -91,17 +93,18 @@ func (s *StarkSpider) Start(ctx context.Context) {
 				htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseCash)
 			}
 			//
-			// if strings.Contains(url, "vFD_BalanceSheet") {
-			// 	htmlDoc.Find(`#BalanceSheetNewTable0`).Each(s.ParseBalance)
-			// }
+			if strings.Contains(url, "vFD_BalanceSheet") {
+				htmlDoc.Find(`#BalanceSheetNewTable0`).Each(s.ParseBalance)
+			}
 		}
-
 	})
 
 	// 对visit的线程数做限制，visit可以同时运行多个
 	if err := c.Limit(&colly.LimitRule{
-		Parallelism: 1,
 		Delay:       15 * time.Second,
+		RandomDelay: 15 * time.Second,
+		DomainGlob:  "*",
+		Parallelism: 1,
 	}); err != nil {
 		log.Error().Err(err).Msg("Limit")
 	}
@@ -115,38 +118,39 @@ func (s *StarkSpider) Start(ctx context.Context) {
 		}
 
 		log.Error().Err(err).Msgf("get :%s", url)
-
 	})
 
-	// codes, err := s.search.SearchNameCode(context.Background(), items.SearchNameCodeParam{})
-	// if err != nil {
-	// 	log.Error().Err(err).Msg("find name and code")
-	// 	return
-	// }
+	codes, err := s.search.SearchNameCode(context.Background(), model.SearchNameCodeParam{})
+	if err != nil {
+		log.Error().Err(err).Msg("find name and code")
+		return
+	}
 	years := config.GetConfig().CrawlConfig.Period
-	codes := config.GetConfig().CrawlConfig.Code
 	for i := range codes {
 		for j := range years {
-			// proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
-			proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i], years[j])
-			if err := c.Visit(proUrl); err != nil {
-				log.Error().Err(err).Msgf("Visit：%s", proUrl)
+			crawl, err := s.search.SearchCrawl(ctx, model.SearchCrawlParam{Code: codes[i].Code, Year: years[j]})
+			if err != nil {
+				log.Error().Err(err).Msg("SearchCrawl")
+				continue
+			}
+			if len(crawl) >= 3 {
+				log.Info().Str("Code", codes[i].Code).Str("year", years[i]).Msg("data has crawled")
 				continue
 			}
 
-			// if codes[i].CashFlow == 0 {
-			// 	cashUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_CashFlow/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
-			// 	if err := c.Visit(cashUrl); err != nil {
-			// 		log.Error().Err(err).Msgf("Visit: %s", cashUrl)
-			// 	}
-			// }
+			urls := make([]string, 0)
 
-			// if codes[i].Balance == 0 {
-			// 	balanceUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_BalanceSheet/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
-			// 	if err := c.Visit(balanceUrl); err != nil {
-			// 		log.Error().Err(err).Msgf("Visit:%s", balanceUrl)
-			// 	}
-			// }
+			proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			cashUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_CashFlow/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			balanceUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_BalanceSheet/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			urls = append(urls, proUrl, cashUrl, balanceUrl)
+			for _, ur := range urls {
+				if err := c.Visit(ur); err != nil {
+					log.Error().Err(err).Str("url", ur).Msgf("Visit")
+					continue
+				}
+				log.Info().Str("url", ur).Msgf("Visit start")
+			}
 		}
 
 		// ti := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.UTC)
@@ -201,6 +205,15 @@ func (s *StarkSpider) ParseProfile(i int, selection *goquery.Selection) {
 			log.Error().Err(err).Msg("CreateProfile")
 		}
 	}
+	crawl := &model.Crawl{
+		Code:      code,
+		Year:      utils.GetReportYear(incomes[0].ReportPeriod),
+		CrawlType: consts.ReportTypeProfile,
+		CrawlAt:   time.Now().UnixMilli(),
+	}
+	if err := s.create.CreateCrawl(context.Background(), crawl); err != nil {
+		log.Error().Err(err).Msg("CreateCrawl")
+	}
 
 	log.Info().Msgf("写入利润表成功,Name %s:Code：%s", name, code)
 }
@@ -232,61 +245,64 @@ func (s *StarkSpider) ParseCash(j int, selection *goquery.Selection) {
 		if err := s.create.CreateCashFlow(context.Background(), cashs[i]); err != nil {
 			log.Error().Err(err).Msg("CreateProfile")
 		}
-		crawl := &model.Crawl{
-			Code:         code,
-			ReportPeriod: "",
-			CrawlType:    "",
-			CrawlAt:      time.Now().UnixMilli(),
-		}
-		updater := map[string]interface{}{"cash_flow": time.Now().Unix()}
-		if err := s.create.CreateBalance(context.Background(), code, updater); err != nil {
-			log.Error().Err(err).Msg("UpdateNameCode")
-		}
 	}
-	log.Info().Msgf("写入现金表成功,Name:%s Code：%s", name, code)
+	crawl := &model.Crawl{
+		Code:      code,
+		Year:      utils.GetReportYear(cashs[0].ReportPeriod), // 这里需要进一步解析
+		CrawlType: consts.ReportTypeCash,
+		CrawlAt:   time.Now().UnixMilli(),
+	}
+	if err := s.create.CreateCrawl(context.Background(), crawl); err != nil {
+		log.Error().Err(err).Msg("CreateCrawl")
+	}
 
+	log.Info().Msgf("写入现金表成功,Name:%s Code：%s", name, code)
 }
 
-//
-// func (s *StarkSpider) ParseBalance(i int, selection *goquery.Selection) {
-//
-// 	res := make([]string, 0)
-// 	name, code := "", ""
-//
-// 	selection.Find(" tr td").Each(
-// 		func(i int, selection *goquery.Selection) {
-// 			t := selection.Text()
-// 			res = append(res, t)
-// 		},
-// 	)
-//
-// 	selection.Find("tr th ").Each(
-// 		func(i int, selection *goquery.Selection) {
-// 			na, co := spiders.parseNameCode(selection)
-// 			name = na
-// 			code = co
-// 		})
-//
-// 	cashs, err := parseBalance(name, code, res)
-// 	if err != nil {
-// 		log.Error().Err(err).Msg("parseProfile")
-// 		return
-// 	}
-// 	for i := range cashs {
-// 		if err := s.create.CreateBalance(context.Background(), cashs[i]); err != nil {
-// 			log.Error().Err(err).Msg("CreateProfile")
-// 		}
-// 		updater := map[string]interface{}{"balance": time.Now().Unix()}
-// 		if err := s.create.UpdateNameCode(context.Background(), code, updater); err != nil {
-// 			log.Error().Err(err).Msg("UpdateNameCode")
-// 		}
-// 	}
-// 	log.Info().Msgf("写入资产负债表,Name: %s Code：%s", name, code)
-//
-// }
+func (s *StarkSpider) ParseBalance(i int, selection *goquery.Selection) {
+
+	res := make([]string, 0)
+	name, code := "", ""
+
+	selection.Find(" tr td").Each(
+		func(i int, selection *goquery.Selection) {
+			t := selection.Text()
+			res = append(res, t)
+		},
+	)
+
+	selection.Find("tr th ").Each(
+		func(i int, selection *goquery.Selection) {
+			na, co := utils.ParseNameCode(selection)
+			name = na
+			code = co
+		})
+
+	balance, err := parseBalance(name, code, res)
+	if err != nil {
+		log.Error().Err(err).Msg("parseProfile")
+		return
+	}
+	for i := range balance {
+		if err := s.create.CreateBalance(context.Background(), balance[i]); err != nil {
+			log.Error().Err(err).Msg("CreateProfile")
+		}
+	}
+	crawl := &model.Crawl{
+		Code:      code,
+		Year:      utils.GetReportYear(balance[0].ReportPeriod),
+		CrawlType: consts.ReportTypeProfile,
+		CrawlAt:   time.Now().UnixMilli(),
+	}
+	if err := s.create.CreateCrawl(context.Background(), crawl); err != nil {
+		log.Error().Err(err).Msg("CreateCrawl")
+	}
+
+	log.Info().Msgf("写入资产负债表,Name: %s Code：%s", name, code)
+}
 
 func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
-	per := utils.ParsePeriod(res)
+	per := utils.ParsePeriodCnt(res)
 	date := utils.ReportDate(res)
 	if per != len(date) {
 		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
@@ -318,20 +334,21 @@ func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
 	}
 	i := 0
 	for i < len(res) {
-		for k, v := range item {
-			if strings.Contains(res[i], k) {
-				for j := 0; j < per; j++ {
-					_ = utils.SetField(ans[j], v, ParseNums(res[i+j+1]))
-				}
-				i = i + per
-			}
+		fi, ok := item[res[i]]
+		if !ok {
+			i++
+			continue
 		}
+		for j := 0; j < per; j++ {
+			_ = utils.SetField(ans[j], fi, ParseNum(res[i+j+1]))
+		}
+		i += per + 1
 	}
 
 	return ans, nil
 }
 
-func ParseNums(res string) int64 {
+func ParseNum(res string) int64 {
 	if res == "--" {
 		return 0
 	}
@@ -348,20 +365,8 @@ func ParseNums(res string) int64 {
 	return 0
 }
 
-// func Parse() {
-// 	for j := 0; j < per; j++ {
-// 		// parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64)
-// 		ss := strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1)
-// 		if ss != "" {
-// 			if parseInt, err := strconv.ParseFloat(ss, 64); err == nil {
-// 				ans[j].OperateIn = int64(parseInt)
-// 			}
-// 		}
-// 	}
-// }
-
 func parseCashFlow(name, code string, res []string) ([]*model.CashFlow, error) {
-	per := utils.ParsePeriod(res)
+	per := utils.ParsePeriodCnt(res)
 	date := utils.ReportDate(res)
 	if per != len(date) {
 		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
@@ -389,81 +394,65 @@ func parseCashFlow(name, code string, res []string) ([]*model.CashFlow, error) {
 
 	i := 0
 	for i < len(res) {
-		for k, v := range item {
-			if res[i] == k {
-				for j := 0; j < per; j++ {
-					_ = utils.SetField(ans[j], v, ParseNums(res[i+j+1]))
-				}
-				i = i + per
-			}
+		fi, ok := item[res[i]]
+		if !ok {
+			i++
+			continue
 		}
+		for j := 0; j < per; j++ {
+			_ = utils.SetField(ans[j], fi, ParseNum(res[i+j+1]))
+		}
+		i += per + 1
 	}
 
 	return ans, nil
 }
 
-//
-// func parseBalance(name, code string, res []string) ([]items.Balance, error) {
-// 	per := Period(res)
-// 	date := ReportDate(res)
-// 	if per != len(date) {
-// 		log.Error().Err(fmt.Errorf("日期列不符"))
-// 		return nil, fmt.Errorf("日期列不符")
-// 	}
-// 	ans := make([]items.Balance, per)
-// 	for i := 0; i < len(date); i++ {
-// 		ans[i].ReportingPeriod = date[i]
-// 		ans[i].Code = code
-// 		ans[i].Name = name
-// 	}
-// 	i := 0
-// 	for i < len(res) {
-// 		switch res[i] {
-// 		case "货币资金":
-// 			for j := 0; j < per; j++ {
-// 				if parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64); err == nil {
-// 					ans[j].MoneyFunds = int64(parseInt)
-// 				}
-// 			}
-// 			i = i + per
-// 		case "交易性金融资产":
-// 			for j := 0; j < per; j++ {
-// 				if parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64); err == nil {
-// 					ans[j].TransFinance = int64(parseInt)
-// 				}
-// 			}
-// 			i = i + per
-// 		case "存货":
-// 			for j := 0; j < per; j++ {
-// 				if parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64); err == nil {
-// 					ans[j].Stock = int64(parseInt)
-// 				}
-// 			}
-// 			i = i + per
-// 		case "短期借款":
-// 			for j := 0; j < per; j++ {
-// 				if parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64); err == nil {
-// 					ans[j].ShortLoan = int64(parseInt)
-// 				}
-// 			}
-// 			i = i + per
-// 		case "长期借款":
-// 			for j := 0; j < per; j++ {
-// 				if parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64); err == nil {
-// 					ans[j].LongLoan = int64(parseInt)
-// 				}
-// 			}
-// 			i = i + per
-//
-// 		case "实收资本(或股本)", "股本", "实收资本":
-// 			for j := 0; j < per; j++ {
-// 				if parseInt, err := strconv.ParseFloat(strings.Replace(strings.Replace(res[i+j+1], ",", "", -1), "-", "", -1), 64); err == nil {
-// 					ans[j].Capital = int64(parseInt)
-// 				}
-// 			}
-// 		}
-// 		i = i + 1
-// 	}
-//
-// 	return ans, nil
-// }
+func parseBalance(name, code string, res []string) ([]*model.Balance, error) {
+
+	per := utils.ParsePeriodCnt(res)
+	date := utils.ReportDate(res)
+	if per != len(date) {
+		log.Error().Err(fmt.Errorf("日期列不符:%s,%s", name, code))
+		return nil, fmt.Errorf("日期列不符")
+	}
+	ans := make([]*model.Balance, per)
+	for i := range ans {
+		ans[i] = &model.Balance{}
+	}
+	for i := 0; i < len(date); i++ {
+		ans[i].ReportPeriod = date[i]
+		ans[i].Code = code
+		ans[i].Name = name
+	}
+
+	item := map[string]string{
+		"货币资金":    "MoneyFunds",
+		"交易性金融资产": "TransFinance",
+		"应收账款":    "AccountReceive",
+		"应收票据":    "NoteReceive",
+		"应付账款":    "AccountPay",
+		"应付票据":    "NotePay",
+		"固定资产":    "Assets",
+		"存货":      "Stock",
+		"在建工程":    "Construct",
+		"短期借款":    "ShortLoan",
+		"长期借款":    "LongLoan",
+		"实收资本":    "Capital",
+	}
+
+	i := 0
+	for i < len(res) {
+		fi, ok := item[res[i]]
+		if !ok {
+			i++
+			continue
+		}
+		for j := 0; j < per; j++ {
+			_ = utils.SetField(ans[j], fi, ParseNum(res[i+j+1]))
+		}
+		i += per + 1
+	}
+
+	return ans, nil
+}

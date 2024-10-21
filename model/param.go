@@ -6,10 +6,9 @@ type SearchNameCodeParam struct {
 	FilterCrawl bool
 }
 type SearchCrawlParam struct {
-	Code         string
-	ReportPeriod string
-	CrawlType    string
-	UniqueID     int64
+	Code      string
+	Year      string
+	CrawlType string
 }
 
 type SearchProfileParam struct {
