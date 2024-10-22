@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"outback/kingo/consts"
 	"strconv"
 	"strings"
@@ -33,13 +34,14 @@ import (
 // }
 
 type StarkSpider struct {
-	create dao.CreateDal
-	search dao.SearchDal
+	create    dao.CreateDal
+	search    dao.SearchDal
+	crawlType []string
 }
 
 func NewStarkSpider(cre dao.CreateDal, sea dao.SearchDal) *StarkSpider {
-
-	return &StarkSpider{create: cre, search: sea}
+	cra := []string{consts.ReportTypeBalance, consts.ReportTypeCash, consts.ReportTypeProfile}
+	return &StarkSpider{create: cre, search: sea, crawlType: cra}
 }
 
 func (s *StarkSpider) Start(ctx context.Context) {
@@ -101,8 +103,8 @@ func (s *StarkSpider) Start(ctx context.Context) {
 
 	// 对visit的线程数做限制，visit可以同时运行多个
 	if err := c.Limit(&colly.LimitRule{
-		Delay:       5 * time.Second,
-		RandomDelay: 5 * time.Second,
+		Delay:       1 * time.Second,
+		RandomDelay: 1 * time.Second,
 		DomainGlob:  "*",
 		Parallelism: 1,
 	}); err != nil {
@@ -114,6 +116,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 		status := response.StatusCode
 		if status == 456 {
 			log.Info().Msg("IP已被封禁了")
+			os.Exit(400)
 			return
 		}
 
@@ -126,7 +129,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 		return
 	}
 	years := config.GetConfig().CrawlConfig.Period
-	for i := 20; i < len(codes); i++ {
+	for i := 0; i < len(codes); i++ {
 		for j := range years {
 			crawl, err := s.search.SearchCrawl(ctx, model.SearchCrawlParam{Code: codes[i].Code, Year: years[j]})
 			if err != nil {
@@ -134,7 +137,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 				continue
 			}
 			if len(crawl) >= 3 {
-				log.Info().Str("Code", codes[i].Code).Str("year", years[i]).Msg("data has crawled")
+				log.Info().Str("Code", codes[i].Code).Str("year", years[j]).Msg("data has crawled")
 				continue
 			}
 
@@ -146,7 +149,21 @@ func (s *StarkSpider) Start(ctx context.Context) {
 			cashUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_CashFlow/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
 			// 资产表
 			balanceUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_BalanceSheet/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
-			urls = append(urls, proUrl, cashUrl, balanceUrl)
+			exit := make(map[string]bool)
+
+			for _, ch := range crawl {
+				exit[ch.CrawlType] = true
+			}
+			if !exit[consts.ReportTypeBalance] {
+				urls = append(urls, balanceUrl)
+			}
+			if !exit[consts.ReportTypeCash] {
+				urls = append(urls, cashUrl)
+			}
+			if !exit[consts.ReportTypeProfile] {
+				urls = append(urls, proUrl)
+			}
+
 			for _, ur := range urls {
 				if err := c.Visit(ur); err != nil {
 					log.Error().Err(err).Str("url", ur).Msgf("Visit")
@@ -331,7 +348,6 @@ func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
 		"财务费用":        "FinancialCost",
 		"研发费用":        "RDCost",
 		"五、净利润":       "NetProfit",
-		"稀释每股收益(元/股)": "EarnPerShare",
 		"基本每股收益(元/股)": "EarnPerShare",
 		"投资收益":        "Invest",
 		"公允价值变动收益":    "FairIn",
@@ -344,15 +360,20 @@ func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
 			continue
 		}
 		for j := 0; j < per; j++ {
-			_ = utils.SetField(ans[j], fi, ParseNum(res[i+j+1]))
+			_ = utils.SetField(ans[j], fi, ParseInt64(res[i+j+1]))
+			// 对于每股收益要特别判定
+			if res[i] == "基本每股收益(元/股)" {
+				_ = utils.SetField(ans[j], fi, int64(ParseFloat(res[i+j+1])*100))
+			}
 		}
+
 		i += per + 1
 	}
 
 	return ans, nil
 }
 
-func ParseNum(res string) int64 {
+func ParseInt64(res string) int64 {
 	if res == "--" {
 		return 0
 	}
@@ -365,6 +386,23 @@ func ParseNum(res string) int64 {
 	// 注意可能会有负数哦
 	if parseInt, err := strconv.ParseFloat(strings.ReplaceAll(res, ",", ""), 64); err == nil {
 		return int64(parseInt)
+	}
+	return 0
+}
+
+func ParseFloat(res string) float64 {
+	if res == "--" {
+		return 0
+	}
+	if strings.Contains(res, "亿") {
+		fmt.Println("has 亿")
+	}
+	if strings.Contains(res, "万") {
+		fmt.Println("has 万")
+	}
+	// 注意可能会有负数哦
+	if parseInt, err := strconv.ParseFloat(strings.ReplaceAll(res, ",", ""), 64); err == nil {
+		return parseInt
 	}
 	return 0
 }
@@ -405,7 +443,7 @@ func parseCashFlow(name, code string, res []string) ([]*model.CashFlow, error) {
 			continue
 		}
 		for j := 0; j < per; j++ {
-			_ = utils.SetField(ans[j], fi, ParseNum(res[i+j+1]))
+			_ = utils.SetField(ans[j], fi, ParseInt64(res[i+j+1]))
 		}
 		i += per + 1
 	}
@@ -456,7 +494,7 @@ func parseBalance(name, code string, res []string) ([]*model.Balance, error) {
 			continue
 		}
 		for j := 0; j < per; j++ {
-			_ = utils.SetField(ans[j], fi, ParseNum(res[i+j+1]))
+			_ = utils.SetField(ans[j], fi, ParseInt64(res[i+j+1]))
 		}
 		i += per + 1
 	}

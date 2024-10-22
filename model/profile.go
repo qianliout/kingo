@@ -24,7 +24,7 @@ type Profile struct {
 	Invest         int64  `gorm:"column:invest"`           // 投资收益
 	FairIn         int64  `gorm:"column:fair_in"`          // 公允价值变动收益
 	NetProfit      int64  `gorm:"column:net_profit"`       // 净利润
-	EarnPerShare   int64  `gorm:"column:earn_per_share"`   // 稀释每股收益
+	EarnPerShare   int64  `gorm:"column:earn_per_share"`   // 稀释每股收益 // 结果乘以100
 
 	CreatedAt int64 `gorm:"autoCreateTime:milli;column:created_at"` // milliseconds
 	UpdatedAt int64 `gorm:"autoUpdateTime:milli;column:updated_at"` // milliseconds

@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"outback/kingo/utils"
 )
 
 // 股票列表
@@ -58,6 +59,7 @@ type DataSH struct {
 
 type Crawl struct {
 	ID        int64  `gorm:"column:id"`
+	UniqueID  int64  `gorm:"column:unique_id"`
 	Code      string `gorm:"column:code"` // 代码
 	Year      string `gorm:"column:year"` // 报告年份
 	CrawlType string `gorm:"column:crawl_type"`
@@ -71,4 +73,5 @@ func (vi *Crawl) TableName() string {
 }
 
 func (vi *Crawl) Serialize() {
+	vi.UniqueID = utils.GenerateUUID64(fmt.Sprintf("%s-%s-%s", vi.Code, vi.Year, vi.CrawlType))
 }

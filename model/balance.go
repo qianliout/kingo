@@ -8,9 +8,8 @@ import (
 // 资产负债表
 
 type Balance struct {
-	ID       int64 `gorm:"column:id"`
-	UniqueID int64 `gorm:"column:unique_id"`
-
+	ID             int64  `gorm:"column:id"`
+	UniqueID       int64  `gorm:"column:unique_id"`
 	Name           string `gorm:"column:name"`            // 名字
 	Code           string `gorm:"column:code"`            // 代码
 	ReportPeriod   string `gorm:"column:report_period"`   // 报告期
