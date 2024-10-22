@@ -1,13 +1,11 @@
-package cmd
+package flag
 
 import (
 	"fmt"
-	"outback/kingo/config"
-	"outback/kingo/service/flag"
-
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"outback/kingo/config"
 )
 
 type Option struct {
@@ -16,7 +14,7 @@ type Option struct {
 
 func GetOptionByViper() Option {
 	return Option{
-		ConfigFile: viper.GetString(flag.ConfigFile),
+		ConfigFile: viper.GetString(ConfigFile),
 	}
 }
 

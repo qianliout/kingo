@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"outback/kingo/consts"
 	"time"
 
 	"outback/kingo/dao"
@@ -68,7 +69,7 @@ func (s *NameCode) Start(ctx context.Context) {
 			return
 		}
 		for i := range res.Result {
-			data := &model.NameCode{Name: res.Result[i].Name, Code: res.Result[i].Code}
+			data := &model.NameCode{Name: res.Result[i].Name, Code: res.Result[i].Code, Exchange: consts.ExchangeShanghai}
 			if err := s.create.CreateNameCode(context.Background(), data); err != nil {
 				log.Error().Err(err).Str("data", data.LogStr()).Msg("create name")
 			}

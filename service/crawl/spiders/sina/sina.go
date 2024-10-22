@@ -140,8 +140,11 @@ func (s *StarkSpider) Start(ctx context.Context) {
 
 			urls := make([]string, 0)
 
+			// 利润表
 			proUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_ProfitStatement/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			// 现金流量表
 			cashUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_CashFlow/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
+			// 资产表
 			balanceUrl := fmt.Sprintf("https://money.finance.sina.com.cn/corp/go.php/vFD_BalanceSheet/stockid/%s/ctrl/%s/displaytype/4.phtml", codes[i].Code, years[j])
 			urls = append(urls, proUrl, cashUrl, balanceUrl)
 			for _, ur := range urls {

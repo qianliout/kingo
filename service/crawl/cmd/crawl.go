@@ -7,6 +7,7 @@ import (
 	"outback/kingo/dao"
 	"outback/kingo/service/crawl/spiders"
 	"outback/kingo/service/crawl/spiders/sina"
+	"outback/kingo/service/flag"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -22,13 +23,13 @@ func NewCrawlCommand() *cobra.Command {
 		Short: "crawl sina",
 		Long:  "\n crawl sina data",
 		Run: func(cmd *cobra.Command, args []string) {
-			option := GetOptionByViper()
+			option := flag.GetOptionByViper()
 			c, err := config.ParseConfig(option.ConfigFile)
 			if err != nil {
 				os.Exit(500)
 				return
 			}
-			if err := ValidateConfig(c); err != nil {
+			if err := flag.ValidateConfig(c); err != nil {
 				os.Exit(500)
 				return
 			}
