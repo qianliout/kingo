@@ -1,13 +1,15 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+	"outback/kingo/utils"
+)
 
 // 利润表
 
 type Profile struct {
-	ID       int64  `gorm:"column:id"`
-	UniqueID string `gorm:"column:unique_id" json:"uniqueId,string"`
-
+	ID             int64  `gorm:"column:id"`
+	UniqueID       int64  `gorm:"column:unique_id" json:"uniqueId"`
 	Code           string `gorm:"column:code"`             // 代码
 	Name           string `gorm:"column:name"`             // 名字
 	ReportPeriod   string `gorm:"column:report_period"`    // 报告期
@@ -33,5 +35,5 @@ func (vi *Profile) TableName() string {
 }
 
 func (vi *Profile) Serialize() {
-	vi.UniqueID = fmt.Sprintf("%s-%s", vi.Code, vi.ReportPeriod)
+	vi.UniqueID = utils.GenerateUUID64(fmt.Sprintf("%s-%s", vi.Code, vi.ReportPeriod))
 }

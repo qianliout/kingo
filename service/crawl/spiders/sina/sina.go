@@ -101,8 +101,8 @@ func (s *StarkSpider) Start(ctx context.Context) {
 
 	// 对visit的线程数做限制，visit可以同时运行多个
 	if err := c.Limit(&colly.LimitRule{
-		Delay:       15 * time.Second,
-		RandomDelay: 15 * time.Second,
+		Delay:       5 * time.Second,
+		RandomDelay: 5 * time.Second,
 		DomainGlob:  "*",
 		Parallelism: 1,
 	}); err != nil {
@@ -126,7 +126,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 		return
 	}
 	years := config.GetConfig().CrawlConfig.Period
-	for i := range codes {
+	for i := 20; i < len(codes); i++ {
 		for j := range years {
 			crawl, err := s.search.SearchCrawl(ctx, model.SearchCrawlParam{Code: codes[i].Code, Year: years[j]})
 			if err != nil {
@@ -291,7 +291,7 @@ func (s *StarkSpider) ParseBalance(i int, selection *goquery.Selection) {
 	crawl := &model.Crawl{
 		Code:      code,
 		Year:      utils.GetReportYear(balance[0].ReportPeriod),
-		CrawlType: consts.ReportTypeProfile,
+		CrawlType: consts.ReportTypeBalance,
 		CrawlAt:   time.Now().UnixMilli(),
 	}
 	if err := s.create.CreateCrawl(context.Background(), crawl); err != nil {
@@ -329,6 +329,7 @@ func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
 		"研发费用":        "RDCost",
 		"五、净利润":       "NetProfit",
 		"稀释每股收益(元/股)": "EarnPerShare",
+		"基本每股收益(元/股)": "EarnPerShare",
 		"投资收益":        "Invest",
 		"公允价值变动收益":    "FairIn",
 	}
@@ -383,13 +384,14 @@ func parseCashFlow(name, code string, res []string) ([]*model.CashFlow, error) {
 	}
 
 	item := map[string]string{
-		"销售商品流入":   "SaleIn",
-		"税费返还":     "TaxIn",
-		"经营活动流入小计": "SumIn",
-		"购买商品的流出":  "SaleOut",
-		"支付给员工的流出": "EmpOut",
-		"流出小计":     "SumOut",
-		"经营活动现金净额": "Netflow",
+		"销售商品流入":          "SaleIn",
+		"销售商品、提供劳务收到的现金":  "SaleIn",
+		"收到的税费返还":         "TaxIn",
+		"经营活动现金流入小计":      "SumIn",
+		"购买商品、接受劳务支付的现金":  "SaleOut",
+		"支付给职工以及为职工支付的现金": "EmpOut",
+		"经营活动现金流出小计":      "SumOut",
+		"经营活动产生的现金流量净额":   "Netflow",
 	}
 
 	i := 0
@@ -427,18 +429,20 @@ func parseBalance(name, code string, res []string) ([]*model.Balance, error) {
 	}
 
 	item := map[string]string{
-		"货币资金":    "MoneyFunds",
-		"交易性金融资产": "TransFinance",
-		"应收账款":    "AccountReceive",
-		"应收票据":    "NoteReceive",
-		"应付账款":    "AccountPay",
-		"应付票据":    "NotePay",
-		"固定资产":    "Assets",
-		"存货":      "Stock",
-		"在建工程":    "Construct",
-		"短期借款":    "ShortLoan",
-		"长期借款":    "LongLoan",
-		"实收资本":    "Capital",
+		"货币资金":      "MoneyFunds",
+		"交易性金融资产":   "TransFinance",
+		"应收账款":      "AccountReceive",
+		"应收票据":      "NoteReceive",
+		"应付账款":      "AccountPay",
+		"应付票据":      "NotePay",
+		"固定资产":      "Assets",
+		"固定资产净额":    "Assets",
+		"存货":        "Stock",
+		"在建工程":      "Construct",
+		"短期借款":      "ShortLoan",
+		"长期借款":      "LongLoan",
+		"实收资本":      "Capital",
+		"实收资本(或股本)": "Capital",
 	}
 
 	i := 0

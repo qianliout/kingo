@@ -90,7 +90,7 @@ func (dal *CreateDao) CreateCrawl(ctx context.Context, data *model.Crawl) error 
 
 	db := dal.db.Table(data.TableName()).WithContext(ctx)
 	res := make([]*model.NameCode, 0)
-	if err := db.Where("code = ?", data.Code).Where("report_period").Find(&res).Error; err != nil {
+	if err := db.Where("code = ?", data.Code).Where("year = ?", data.Year).Find(&res).Error; err != nil {
 		return err
 	}
 	if len(res) > 0 {

@@ -84,7 +84,6 @@ create table crawl
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
-
 create table cash_flow
 (
     id            bigint       not null auto_increment primary key,

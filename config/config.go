@@ -31,7 +31,7 @@ func GetDefaultConfig() *Config {
 	c := &Config{
 		Database: DBConfig{
 			Username: "root",
-			Password: "root",
+			Password: "Lql132435",
 			Host:     "127.0.0.1",
 			Port:     "3306",
 			DBName:   "stack",
@@ -50,6 +50,15 @@ func GetConfig() *Config {
 }
 
 func SetDefaultConfig(c *Config) *Config {
+	if c.Database.Username == "" {
+		c.Database = GetDefaultConfig().Database
+	}
+	if c.CrawlConfig.Debug == "" {
+		c.CrawlConfig.Debug = "true"
+	}
+	if len(c.CrawlConfig.Period) == 0 {
+		c.CrawlConfig.Period = []string{"2024", "2023"}
+	}
 	return c
 }
 
@@ -57,7 +66,11 @@ func ParseConfig(str string) (*Config, error) {
 	if conf != nil {
 		return conf, nil
 	}
-
+	if str == "" {
+		c := GetDefaultConfig()
+		conf = c
+		return c, nil
+	}
 	// 读取YAML文件
 	yamlFile, err := os.ReadFile(str)
 	if err != nil {
@@ -65,10 +78,12 @@ func ParseConfig(str string) (*Config, error) {
 	}
 
 	// 解析YAML内容到Config结构体
-	var c Config
-	if err := yaml.Unmarshal(yamlFile, &c); err != nil {
+	var c *Config
+	if err := yaml.Unmarshal(yamlFile, c); err != nil {
 		return nil, err
 	}
-	conf = &c
+	c = SetDefaultConfig(c)
+	conf = c
+
 	return conf, nil
 }

@@ -5,7 +5,6 @@ import (
 	"os"
 	"outback/kingo/service/crawl/cmd"
 	"outback/kingo/service/flag"
-	"time"
 )
 
 func main() {
@@ -14,7 +13,7 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	time.Sleep(time.Hour)
+	// time.Sleep(time.Hour)
 }
 
 func NewCmdRoot() *cobra.Command {
@@ -27,9 +26,8 @@ func NewCmdRoot() *cobra.Command {
 	}
 
 	flag.AddOption(rootCmd)
-	// rootCmd.AddCommand(version.NewVersionCmd())
-	// rootCmd.AddCommand(huawei.NewHuaweiCmd())
 	rootCmd.AddCommand(cmd.NewCrawlCommand())
+	rootCmd.AddCommand(cmd.NewCrawlNameCommand())
 
 	return rootCmd
 }

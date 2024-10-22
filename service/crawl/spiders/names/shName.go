@@ -54,40 +54,6 @@ func (s *NameCode) Start(ctx context.Context) {
 		log.Error().Str("url", r.URL.String()).Msg("start crawl")
 	})
 
-	// // 发现并访问其他年度的利润表
-	// c.OnHTML(`#con02-1`, func(e *colly.HTMLElement) {
-	// 	e.ForEach(" td a ", func(page int, el *colly.HTMLElement) {
-	// 		url := el.Attr("href")
-	// 		if strings.Contains(url, "vFD_ProfitStatement") {
-	// 			fmt.Println(url)
-	//
-	// 			// if err := e.Request.Visit(url); err != nil {
-	// 			// 	log.Error().Err(err).Msgf("Visit:%s", url)
-	// 			// }
-	// 		}
-	// 	})
-	// })
-	// // 发现并访问其他公司
-	// c.OnHTML(`#con02-1`, func(e *colly.HTMLElement) {
-	// 	e.ForEach(" td a ", func(page int, el *colly.HTMLElement) {
-	// 		url := el.Attr("href")
-	// 		if strings.Contains(url, "vFD_ProfitStatement") {
-	// 			fmt.Println(url)
-	//
-	// 			// if err := e.Request.Visit(url); err != nil {
-	// 			// 	log.Error().Err(err).Msgf("Visit:%s", url)
-	// 			// }
-	// 		}
-	// 	})
-	// })
-
-	// extract status code
-	// c.OnResponse(func(r *colly.Response) {
-	// 	fmt.Println("response received", r.StatusCode)
-	// 	// 设置context
-	// 	fmt.Println(r.Ctx.Get("url"))
-	// })
-
 	c.OnResponse(func(resp *colly.Response) {
 		log.Info().Str("url", resp.Request.URL.String()).Msg("response received")
 		if resp.StatusCode != 200 {
@@ -113,14 +79,16 @@ func (s *NameCode) Start(ctx context.Context) {
 	// 对visit的线程数做限制，visit可以同时运行多个
 	_ = c.Limit(&colly.LimitRule{
 		Parallelism: 1,
-		Delay:       10 * time.Second,
+		RandomDelay: 15 * time.Second,
+		DomainGlob:  "*",
+		Delay:       15 * time.Second,
 	})
 
 	c.OnError(func(response *colly.Response, err error) {
 		log.Error().Err(err).Msg(response.Ctx.Get("url"))
 	})
 	// 上证
-	for page := 1; page <= 70; page++ {
+	for page := 1; page <= 5; page++ {
 		url := fmt.Sprintf(s.PageUrl, page, page, time.Now().UnixMilli())
 		err := c.Visit(url)
 		if err != nil {

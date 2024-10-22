@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"outback/kingo/utils"
 )
 
 // 股票列表
@@ -59,9 +58,8 @@ type DataSH struct {
 
 type Crawl struct {
 	ID        int64  `gorm:"column:id"`
-	UniqueID  int64  `gorm:"column:unique_id"`
-	Code      string `gorm:"column:code"`          // 代码
-	Year      string `gorm:"column:report_period"` // 报告年份
+	Code      string `gorm:"column:code"` // 代码
+	Year      string `gorm:"column:year"` // 报告年份
 	CrawlType string `gorm:"column:crawl_type"`
 	CrawlAt   int64  `gorm:"column:crawl_at"`
 	CreatedAt int64  `gorm:"autoCreateTime:milli;column:created_at"` // milliseconds
@@ -73,5 +71,4 @@ func (vi *Crawl) TableName() string {
 }
 
 func (vi *Crawl) Serialize() {
-	vi.UniqueID = utils.GenerateUUID64(fmt.Sprintf("%s-%s-%s", vi.Code, vi.Year, vi.CrawlType))
 }

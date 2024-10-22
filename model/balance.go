@@ -32,7 +32,7 @@ type Balance struct {
 }
 
 func (vi *Balance) TableName() string {
-	return "balance"
+	return "balances"
 }
 
 func (vi *Balance) Serialize() {

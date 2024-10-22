@@ -45,7 +45,7 @@ func (dal *SearchDao) SearchCrawl(ctx context.Context, param model.SearchCrawlPa
 		db = db.Where("code = ?", param.Code)
 	}
 	if param.Year != "" {
-		db = db.Where("report_period = ?", param.Code)
+		db = db.Where("year = ?", param.Year)
 	}
 	err := db.Find(&res).Error
 	return res, err
