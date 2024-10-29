@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"outback/kingo/utils"
 )
 
@@ -10,9 +11,11 @@ import (
 type Profile struct {
 	ID             int64  `gorm:"column:id"`
 	UniqueID       int64  `gorm:"column:unique_id" json:"uniqueId"`
-	Code           string `gorm:"column:code"`             // 代码
-	Name           string `gorm:"column:name"`             // 名字
-	ReportPeriod   string `gorm:"column:report_period"`    // 报告期
+	Code           string `gorm:"column:code"`          // 代码
+	Name           string `gorm:"column:name"`          // 名字
+	ReportPeriod   string `gorm:"column:report_period"` // 报告期
+	Year           int64  `gorm:"column:year"`
+	Month          int64  `gorm:"column:month"`
 	OperateIn      int64  `gorm:"column:operate_in"`       // 营业收入
 	OperateAllCost int64  `gorm:"column:operate_all_cost"` // 营业总成本
 	OperateCost    int64  `gorm:"column:operate_cost"`     // 营业成本

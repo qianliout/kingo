@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"outback/kingo/service/crawl/spiders/names"
+
+	"outback/kingo/service/crawl/spiders/dongfang"
 	"outback/kingo/service/flag"
+
+	"outback/kingo/dao"
+	"outback/kingo/service/crawl/spiders"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"outback/kingo/dao"
-	"outback/kingo/service/crawl/spiders"
 
 	"outback/kingo/config"
 
@@ -58,6 +60,7 @@ func NewNameSpider(cfg *config.Config) (spiders.Spider, error) {
 	}
 	dal := dao.NewCreateDao(db)
 
-	nameS := names.NewNameCode(dal)
+	nameS := dongfang.NewNameCode(dal)
+
 	return nameS, nil
 }

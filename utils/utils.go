@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -21,17 +22,28 @@ func ParseNameCode(selection *goquery.Selection) (name, code string) {
 	return name, code
 }
 
-func ReportDate(res []string) []string {
-	ans := make([]string, 0)
+func ReportDate(res []string) []Report {
+	ans := make([]Report, 0)
 	for i := 0; i < len(res); i++ {
 		if res[i] == "报表日期" {
 			for j := i + 1; j < len(res); j++ {
 				if res[j] == "一、营业总收入" || res[j] == "一、经营活动产生的现金流量" || res[j] == "流动资产" || res[j] == "资产" || res[j] == "一、营业收入" {
 					return ans
 				}
-				ans = append(ans, res[j])
+				ans = append(ans, Report{ReportPeriod: res[j]})
 			}
 		}
+	}
+	// 处理一下，处理成202006 202009 这类这样便于查询
+	// 2020-03-31
+	for i, ch := range ans {
+		split := strings.Split(ch.ReportPeriod, "-")
+		if len(split) < 2 {
+			continue
+		}
+		ans[i].ReportPeriod = strings.Join(split[:2], "")
+		ans[i].Year = GetInt64(split[0])
+		ans[i].Month = GetInt64(split[1])
 	}
 	return ans
 }
@@ -100,4 +112,15 @@ func GetReportYear(str string) string {
 		return split[0]
 	}
 	return ""
+}
+
+func GetInt64(a string) int64 {
+	i, _ := strconv.ParseInt(a, 10, 64)
+	return i
+}
+
+type Report struct {
+	ReportPeriod string
+	Year         int64
+	Month        int64
 }

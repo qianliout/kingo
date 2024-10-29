@@ -1,10 +1,40 @@
 use
     stack;
-drop table if exists `profile`;
 drop table if exists `names`;
+drop table if exists `profile`;
 drop table if exists `balances`;
 drop table if exists `crawl`;
 drop table if exists `cash_flow`;
+
+CREATE TABLE `names`
+(
+    id           bigint       not null auto_increment primary key,
+    `code`       varchar(10)  NOT NULL DEFAULT '',
+    `name`       varchar(100) NOT NULL DEFAULT '',
+    `price`      bigint       NOT NULL DEFAULT 0,
+    `plate`      varchar(200) NOT NULL DEFAULT '',
+    `industry`   varchar(200) NOT NULL DEFAULT '',
+    `exchange`   varchar(200) NOT NULL DEFAULT '',
+    `crawl_at`   bigint       NOT NULL DEFAULT 0,
+    `created_at` bigint       NOT NULL DEFAULT 0,
+    `updated_at` bigint       NOT NULL DEFAULT 0,
+    UNIQUE index `idx_code` (code)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+create table crawl
+(
+    id           bigint      not null auto_increment primary key,
+    unique_id    bigint      not null default 0,
+    code         varchar(10) not null default '',
+    `year`       varchar(50) not null default '',
+    crawl_type   varchar(20) not null default '',
+    `crawl_at`   bigint      NOT NULL DEFAULT 0,
+    `created_at` bigint      NOT NULL DEFAULT 0,
+    `updated_at` bigint      NOT NULL DEFAULT 0,
+    unique index idx_code (unique_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 CREATE TABLE `profile`
 (
@@ -13,6 +43,8 @@ CREATE TABLE `profile`
     `code`             varchar(20)     not null default '',
     `name`             varchar(200)    not null default '',
     `report_period`    varchar(30)     not null default '',
+    `year`             bigint     not null default 0,
+    `month`            bigint    not null default 0,
     `operate_in`       bigint          not null default 0,
     `operate_all_cost` bigint          not null default 0,
     `operate_cost`     bigint          not null default 0,
@@ -32,21 +64,6 @@ CREATE TABLE `profile`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
-CREATE TABLE `names`
-(
-    id           bigint       not null auto_increment primary key,
-    `code`       varchar(10)  NOT NULL DEFAULT '',
-    `name`       varchar(100) NOT NULL DEFAULT '',
-    `price`      bigint       NOT NULL DEFAULT 0,
-    `plate`      varchar(200) NOT NULL DEFAULT '',
-    `industry`   varchar(200) NOT NULL DEFAULT '',
-    `exchange`   varchar(200) NOT NULL DEFAULT '',
-    `crawl_at`   bigint       NOT NULL DEFAULT 0,
-    `created_at` bigint       NOT NULL DEFAULT 0,
-    `updated_at` bigint       NOT NULL DEFAULT 0,
-    UNIQUE index `idx_code` (code)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4;
 
 create table balances
 (
@@ -55,6 +72,8 @@ create table balances
     code            varchar(10)  not null default '',
     name            varchar(200) not null default '',
     `report_period` varchar(30)  not null default '',
+    `year`             bigint     not null default 0,
+    `month`            bigint    not null default 0,
     money_funds     bigint       not null default 0,
     trans_finance   bigint       not null default 0,
     account_receive bigint       not null default 0,
@@ -73,19 +92,6 @@ create table balances
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
-create table crawl
-(
-    id           bigint      not null auto_increment primary key,
-    unique_id    bigint      not null default 0,
-    code         varchar(10) not null default '',
-    `year`       varchar(50) not null default '',
-    crawl_type   varchar(20) not null default '',
-    `crawl_at`   bigint      NOT NULL DEFAULT 0,
-    `created_at` bigint      NOT NULL DEFAULT 0,
-    `updated_at` bigint      NOT NULL DEFAULT 0,
-    unique index idx_code (unique_id)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4;
 
 create table cash_flow
 (
@@ -94,6 +100,8 @@ create table cash_flow
     name          varchar(300) not null default '',
     code          varchar(10)  not null default '',
     report_period varchar(30)  not null default '',
+    `year`             bigint     not null default 0,
+    `month`            bigint    not null default 0,
     sale_in       bigint       not null default 0,
     tax_in        bigint       not null default 0,
     sum_in        bigint       not null default 0,

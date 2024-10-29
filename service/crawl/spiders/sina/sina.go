@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"outback/kingo/consts"
 	"strconv"
 	"strings"
 	"time"
+
+	"outback/kingo/consts"
 
 	"outback/kingo/config"
 	"outback/kingo/dao"
@@ -75,36 +76,30 @@ func (s *StarkSpider) Start(ctx context.Context) {
 			log.Info().Msgf("Status is not OK:%s", url)
 			return
 		}
+		// goquery直接读取resp.Body的内容
+		htmlDoc, err := goquery.NewDocumentFromReader(bytes.NewReader(resp.Body))
+		if err != nil {
+			log.Error().Err(err).Msg("error")
+			return
+		}
 
-		if strings.Contains(url, "hq.sinajs.cn/list") {
-			fmt.Println("解析股价")
-			// s.ParseStarkPrice(bytes.NewReader(resp.Body))
-		} else {
-			// goquery直接读取resp.Body的内容
-			htmlDoc, err := goquery.NewDocumentFromReader(bytes.NewReader(resp.Body))
-			if err != nil {
-				log.Error().Err(err).Msg("error")
-				return
-			}
+		if strings.Contains(url, "vFD_ProfitStatement") {
+			htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseProfile)
+		}
 
-			if strings.Contains(url, "vFD_ProfitStatement") {
-				htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseProfile)
-			}
-
-			if strings.Contains(url, "vFD_CashFlow") {
-				htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseCash)
-			}
-			//
-			if strings.Contains(url, "vFD_BalanceSheet") {
-				htmlDoc.Find(`#BalanceSheetNewTable0`).Each(s.ParseBalance)
-			}
+		if strings.Contains(url, "vFD_CashFlow") {
+			htmlDoc.Find(`#ProfitStatementNewTable0`).Each(s.ParseCash)
+		}
+		//
+		if strings.Contains(url, "vFD_BalanceSheet") {
+			htmlDoc.Find(`#BalanceSheetNewTable0`).Each(s.ParseBalance)
 		}
 	})
 
 	// 对visit的线程数做限制，visit可以同时运行多个
 	if err := c.Limit(&colly.LimitRule{
-		Delay:       1 * time.Second,
-		RandomDelay: 1 * time.Second,
+		Delay:       2 * time.Second,
+		RandomDelay: 2 * time.Second,
 		DomainGlob:  "*",
 		Parallelism: 1,
 	}); err != nil {
@@ -137,7 +132,7 @@ func (s *StarkSpider) Start(ctx context.Context) {
 				continue
 			}
 			if len(crawl) >= 3 {
-				log.Info().Str("Code", codes[i].Code).Str("year", years[j]).Msg("data has crawled")
+				log.Info().Str("Code", codes[i].Code).Str("name", codes[i].Name).Str("year", years[j]).Msg("data has crawled")
 				continue
 			}
 
@@ -333,7 +328,9 @@ func parseProfile(name, code string, res []string) ([]*model.Profile, error) {
 		ans[i] = &model.Profile{}
 	}
 	for i := 0; i < len(date); i++ {
-		ans[i].ReportPeriod = date[i]
+		ans[i].ReportPeriod = date[i].ReportPeriod
+		ans[i].Year = date[i].Year
+		ans[i].Month = date[i].Month
 		ans[i].Code = code
 		ans[i].Name = name
 	}
@@ -419,7 +416,9 @@ func parseCashFlow(name, code string, res []string) ([]*model.CashFlow, error) {
 		ans[i] = &model.CashFlow{}
 	}
 	for i := 0; i < len(date); i++ {
-		ans[i].ReportPeriod = date[i]
+		ans[i].ReportPeriod = date[i].ReportPeriod
+		ans[i].Year = date[i].Year
+		ans[i].Month = date[i].Month
 		ans[i].Code = code
 		ans[i].Name = name
 	}
@@ -464,7 +463,9 @@ func parseBalance(name, code string, res []string) ([]*model.Balance, error) {
 		ans[i] = &model.Balance{}
 	}
 	for i := 0; i < len(date); i++ {
-		ans[i].ReportPeriod = date[i]
+		ans[i].ReportPeriod = date[i].ReportPeriod
+		ans[i].Year = date[i].Year
+		ans[i].Month = date[i].Month
 		ans[i].Code = code
 		ans[i].Name = name
 	}

@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"outback/kingo/utils"
 )
 
@@ -10,9 +11,11 @@ import (
 type Balance struct {
 	ID             int64  `gorm:"column:id"`
 	UniqueID       int64  `gorm:"column:unique_id"`
-	Name           string `gorm:"column:name"`            // 名字
-	Code           string `gorm:"column:code"`            // 代码
-	ReportPeriod   string `gorm:"column:report_period"`   // 报告期
+	Name           string `gorm:"column:name"`          // 名字
+	Code           string `gorm:"column:code"`          // 代码
+	ReportPeriod   string `gorm:"column:report_period"` // 报告期
+	Year           int64  `gorm:"column:year"`
+	Month          int64  `gorm:"column:month"`
 	MoneyFunds     int64  `gorm:"column:money_funds"`     // 现金资产
 	TransFinance   int64  `gorm:"column:trans_finance"`   // 交易性金融资产
 	AccountReceive int64  `gorm:"column:account_receive"` // 应收账款
