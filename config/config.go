@@ -38,7 +38,7 @@ func GetDefaultConfig() *Config {
 		},
 		CrawlConfig: CrawlConfig{
 			Debug:  "true",
-			Period: []string{"2024", "2023", "2022"},
+			Period: []string{"2023", "2022"},
 			Code:   []string{},
 		},
 	}
@@ -57,7 +57,7 @@ func SetDefaultConfig(c *Config) *Config {
 		c.CrawlConfig.Debug = "true"
 	}
 	if len(c.CrawlConfig.Period) == 0 {
-		c.CrawlConfig.Period = []string{"2024", "2023"}
+		c.CrawlConfig.Period = []string{"2022", "2023"}
 	}
 	return c
 }

@@ -131,10 +131,10 @@ func (s *StarkSpider) Start(ctx context.Context) {
 				log.Error().Err(err).Msg("SearchCrawl")
 				continue
 			}
-			if len(crawl) >= 3 {
-				log.Info().Str("Code", codes[i].Code).Str("name", codes[i].Name).Str("year", years[j]).Msg("data has crawled")
-				continue
-			}
+			// if len(crawl) >=  {
+			// 	log.Info().Str("Code", codes[i].Code).Str("name", codes[i].Name).Str("year", years[j]).Msg("data has crawled")
+			// 	continue
+			// }
 
 			urls := make([]string, 0)
 
@@ -222,7 +222,7 @@ func (s *StarkSpider) ParseProfile(i int, selection *goquery.Selection) {
 	}
 	crawl := &model.Crawl{
 		Code:      code,
-		Year:      utils.GetReportYear(incomes[0].ReportPeriod),
+		Year:      strconv.Itoa(int(incomes[0].Year)),
 		CrawlType: consts.ReportTypeProfile,
 		CrawlAt:   time.Now().UnixMilli(),
 	}

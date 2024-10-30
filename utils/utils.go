@@ -28,7 +28,7 @@ func ReportDate(res []string) []Report {
 		if res[i] == "报表日期" {
 			for j := i + 1; j < len(res); j++ {
 				if res[j] == "一、营业总收入" || res[j] == "一、经营活动产生的现金流量" || res[j] == "流动资产" || res[j] == "资产" || res[j] == "一、营业收入" {
-					return ans
+					break
 				}
 				ans = append(ans, Report{ReportPeriod: res[j]})
 			}
